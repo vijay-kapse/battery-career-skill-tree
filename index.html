@@ -4,9 +4,91 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Battery Career Skill Map</title>
+    <style>
+      body { margin:0; font-family: Inter, system-ui, sans-serif; background:#f2f4f8; }
+      .app { height:100vh; display:grid; grid-template-columns: 1fr 360px; gap:12px; padding:12px; box-sizing:border-box; }
+      .map { background:#fff; border-radius:14px; padding:16px; overflow:auto; }
+      .panel { background:#fff; border-radius:14px; padding:16px; overflow:auto; }
+      .row { display:grid; grid-template-columns:170px repeat(3,1fr); align-items:center; min-height:70px; border-bottom:1px solid #eef1f4; }
+      .domain { font-weight:700; display:flex; align-items:center; gap:8px; }
+      .dot-wrap { display:flex; justify-content:center; }
+      .dot { border-radius:999px; border:2px solid transparent; cursor:pointer; transition:transform .15s ease, box-shadow .2s ease; }
+      .dot:hover { transform:scale(1.12); box-shadow:0 0 0 6px rgba(30,136,229,.14); }
+      .dot.active { border-color:#0b57d0; box-shadow:0 0 0 6px rgba(11,87,208,.18); }
+      .hint { color:#6b7280; font-size:12px; margin:0 0 10px; }
+      .pill { font-size:12px; padding:2px 8px; border-radius:999px; background:#eef3ff; color:#2452b8; display:inline-block; margin-right:6px; }
+      h1 { margin:0 0 6px; font-size:22px; }
+      h2 { margin:0 0 10px; font-size:18px; }
+      @media (max-width: 960px){ .app{ grid-template-columns:1fr; } }
+    </style>
   </head>
   <body>
-    <div id="root"></div>
-    <script type="module" src="/src/main.jsx"></script>
+    <div class="app">
+      <section class="map">
+        <h1>Battery career map · dots</h1>
+        <p class="hint">Dot size shows number of jobs. Click any dot to view role details on the right.</p>
+        <div class="row" style="font-size:12px;color:#6b7280;font-weight:600;min-height:40px;">
+          <div></div><div style="text-align:center">Entry</div><div style="text-align:center">Mid</div><div style="text-align:center">Senior</div>
+        </div>
+        <div id="rows"></div>
+      </section>
+      <aside class="panel">
+        <h2 id="title">Select a dot</h2>
+        <p id="desc" class="hint">Click a dot in the map to see details.</p>
+        <div id="meta"></div>
+      </aside>
+    </div>
+
+    <script>
+      const data = [
+        { domain:'Manufacturing', color:'#f68b3c', jobs:{Entry:3, Mid:1, Senior:2} },
+        { domain:'Quality', color:'#45b07a', jobs:{Entry:2, Mid:1, Senior:0} },
+        { domain:'Maintenance', color:'#49a0d8', jobs:{Entry:0, Mid:1, Senior:1} },
+        { domain:'Safety', color:'#f5a623', jobs:{Entry:0, Mid:1, Senior:1} },
+        { domain:'Supply Chain', color:'#7b65e8', jobs:{Entry:2, Mid:1, Senior:1} },
+        { domain:'Engineering', color:'#5a84ff', jobs:{Entry:0, Mid:5, Senior:5} },
+        { domain:'R&D', color:'#ef5b8f', jobs:{Entry:1, Mid:0, Senior:1} },
+        { domain:'Recycling', color:'#6abd56', jobs:{Entry:1, Mid:0, Senior:0} },
+      ];
+      const levels = ['Entry','Mid','Senior'];
+      const rows = document.getElementById('rows');
+      const title = document.getElementById('title');
+      const desc = document.getElementById('desc');
+      const meta = document.getElementById('meta');
+      let active;
+
+      function render(){
+        rows.innerHTML = '';
+        data.forEach((r, ri) => {
+          const row = document.createElement('div');
+          row.className = 'row';
+          row.innerHTML = `<div class="domain"><span style="width:10px;height:10px;border-radius:999px;background:${r.color}"></span>${r.domain}</div>`;
+          levels.forEach((lvl, li) => {
+            const count = r.jobs[lvl] || 0;
+            const cell = document.createElement('div');
+            cell.className = 'dot-wrap';
+            if (!count){ cell.innerHTML = '<span style="width:12px;height:12px;border-radius:999px;border:1px dashed #d6dce5;display:inline-block"></span>'; }
+            else {
+              const dot = document.createElement('button');
+              const size = 8 + Math.min(count, 6) * 4;
+              dot.className = 'dot' + (active===`${ri}-${li}` ? ' active' : '');
+              dot.style.width = `${size}px`; dot.style.height = `${size}px`; dot.style.background = r.color;
+              dot.title = `${r.domain} · ${lvl} (${count} jobs)`;
+              dot.onclick = () => {
+                active = `${ri}-${li}`; render();
+                title.textContent = `${r.domain} · ${lvl}`;
+                desc.textContent = `${count} job${count===1?'':'s'} in this stage. Dot size scales with demand.`;
+                meta.innerHTML = `<span class='pill'>${count} jobs</span><span class='pill'>Clickable node</span>`;
+              };
+              cell.appendChild(dot);
+            }
+            row.appendChild(cell);
+          });
+          rows.appendChild(row);
+        });
+      }
+
+      render();
+    </script>
   </body>
 </html>
