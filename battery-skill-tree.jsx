@@ -1,4 +1,5 @@
 import { useState, useCallback, useMemo, useRef, useEffect } from "react";
+import BatterySkillTreeDots from "./battery-skill-tree-dots.jsx";
 
 // ── Data ──────────────────────────────────────────────────────────────────────
 
@@ -361,6 +362,10 @@ function ProfilePanel({ allocations, panel, setPanel }) {
 // ── Main ──────────────────────────────────────────────────────────────────────
 
 export default function BatterySkillTree() {
+  if (typeof window !== "undefined" && window.location.pathname.startsWith("/dots")) {
+    return <BatterySkillTreeDots />;
+  }
+
   const [alloc, setAlloc] = useState({});
   const [panel, setPanel] = useState("profile");
   const [clicked, setClicked] = useState(null);
