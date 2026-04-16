@@ -1,0 +1,8 @@
+{
+  "name": "battery-career-skill-tree-static",
+  "private": true,
+  "version": "1.0.1",
+  "scripts": {
+    "build": "echo 'Static site: no build step required'"
+  }
+}

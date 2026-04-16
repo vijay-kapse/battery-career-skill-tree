@@ -1,5 +1,4 @@
 import { useState, useCallback, useMemo, useRef, useEffect } from "react";
-import BatterySkillTreeDots from "./battery-skill-tree-dots.jsx";
 
 // ── Data ──────────────────────────────────────────────────────────────────────
 
@@ -99,18 +98,6 @@ const TRAINING_MAP = {
 
 const TOTAL_SKILL_POINTS = 12;
 
-function useIsMobile(bp = 768) {
-  const [m, setM] = useState(false);
-  useEffect(() => {
-    const mq = window.matchMedia(`(max-width: ${bp}px)`);
-    setM(mq.matches);
-    const h = (e) => setM(e.matches);
-    mq.addEventListener("change", h);
-    return () => mq.removeEventListener("change", h);
-  }, [bp]);
-  return m;
-}
-
 // ── Components ────────────────────────────────────────────────────────────────
 
 function StarField({ count = 120 }) {
@@ -126,22 +113,13 @@ function StarField({ count = 120 }) {
   );
 }
 
-function LevelRing({ cx, cy, r, level, color }) {
-  if (level === 0) return null;
-  const gap = 0.08;
-  const seg = (Math.PI * 2 - gap * 3) / 3;
-  return <g>{[0, 1, 2].map(i => {
-    const sa = -Math.PI / 2 + i * (seg + gap), ea = sa + seg, on = i < level;
-    return <path key={i} d={`M ${cx + Math.cos(sa) * r} ${cy + Math.sin(sa) * r} A ${r} ${r} 0 0 1 ${cx + Math.cos(ea) * r} ${cy + Math.sin(ea) * r}`}
-      fill="none" stroke={on ? color : color + "25"} strokeWidth={on ? 3 : 1.5} strokeLinecap="round" />;
-  })}</g>;
-}
-
-function SkillNode({ skill, allocated, unlocked, hovered, onHover, onClick, W, H, justClicked }) {
+function SkillNode({ skill, allocated, unlocked, hovered, onHover, onClick, W, H, justClicked, jobCount }) {
   const d = DOMAINS[skill.domain];
   const px = skill.x * W, py = skill.y * H;
-  const on = allocated > 0, r = 18 + allocated * 2;
-  const label = allocated === 0 ? "Click to learn" : allocated === 1 ? "★ Beginner" : allocated === 2 ? "★★ Intermediate" : "★★★ Advanced (click to reset)";
+  const on = allocated > 0;
+  const prominence = Math.min(Math.max(jobCount, 1), 6);
+  const r = 4 + prominence * 1.8 + allocated * 1.2;
+  const label = `${jobCount} role${jobCount === 1 ? "" : "s"} use this skill`;
   return (
     <g style={{ cursor: unlocked ? "pointer" : "not-allowed" }} opacity={unlocked ? 1 : 0.55}
       onClick={() => unlocked && onClick(skill.id)} onMouseEnter={() => onHover(skill.id)} onMouseLeave={() => onHover(null)}>
@@ -149,21 +127,21 @@ function SkillNode({ skill, allocated, unlocked, hovered, onHover, onClick, W, H
         <animate attributeName="r" from={String(r)} to={String(r + 26)} dur="0.4s" fill="freeze" />
         <animate attributeName="opacity" from="0.8" to="0" dur="0.4s" fill="freeze" />
       </circle>}
-      {on && <circle cx={px} cy={py} r={r + 8} fill="none" stroke={d.color} strokeWidth={1} opacity={0.25}>
-        <animate attributeName="r" values={`${r + 6};${r + 13};${r + 6}`} dur="3s" repeatCount="indefinite" />
-        <animate attributeName="opacity" values="0.25;0.08;0.25" dur="3s" repeatCount="indefinite" />
-      </circle>}
-      <circle cx={px} cy={py} r={r} fill={on ? d.color + "55" : "#2a2a48"} stroke={on ? d.color : "#aabbdd"} strokeWidth={on ? 2.5 : 1.5} />
-      <LevelRing cx={px} cy={py} r={r + 5} level={allocated} color={d.color} />
-      <circle cx={px} cy={py} r={on ? 4 : 3} fill={on ? d.color : "#dde6f0"}>
+      <circle cx={px} cy={py} r={r + 6} fill="none" stroke={on ? d.color : "#9fb4ca"} strokeWidth={on ? 1.2 : 1} opacity={on ? 0.32 : 0.22}>
+        <animate attributeName="r" values={`${r + 5};${r + 10};${r + 5}`} dur="2.2s" repeatCount="indefinite" />
+        <animate attributeName="opacity" values={on ? "0.32;0.12;0.32" : "0.22;0.08;0.22"} dur="2.2s" repeatCount="indefinite" />
+      </circle>
+      <circle cx={px} cy={py} r={r} fill={on ? d.color + "66" : d.color + "30"} stroke={on ? d.color : "#aabbdd"} strokeWidth={on ? 2.2 : 1.2} />
+      <circle cx={px} cy={py} r={Math.max(2.4, r * 0.35)} fill={on ? "#ffffff" : "#dde6f0"}>
         {justClicked && <animate attributeName="r" values="3;6;4" dur="0.3s" fill="freeze" />}
       </circle>
-      <text x={px} y={py + r + 14} textAnchor="middle" fill={on ? "#fff" : "#dde6f0"} fontSize="8.5" fontFamily="'JetBrains Mono', monospace" style={{ pointerEvents: "none" }}>{skill.name}</text>
+      <text x={px} y={py + r + 12} textAnchor="middle" fill={on ? "#fff" : "#dde6f0"} fontSize="8.5" fontFamily="'JetBrains Mono', monospace" style={{ pointerEvents: "none" }}>{skill.name}</text>
       {hovered && <g>
-        <rect x={px - 88} y={py - r - 44} width={176} height={34} rx={4} fill="#111128ee" stroke={d.color + "88"} strokeWidth={1} />
-        <text x={px} y={py - r - 28} textAnchor="middle" fill="#f0f0f0" fontSize="10" fontWeight="600" fontFamily="'JetBrains Mono', monospace">{skill.name}</text>
-        <text x={px} y={py - r - 16} textAnchor="middle" fill={d.color} fontSize="8" fontFamily="'JetBrains Mono', monospace">{label}</text>
+        <rect x={px - 92} y={py - r - 48} width={184} height={38} rx={4} fill="#111128ee" stroke={d.color + "88"} strokeWidth={1} />
+        <text x={px} y={py - r - 31} textAnchor="middle" fill="#f0f0f0" fontSize="10" fontWeight="600" fontFamily="'JetBrains Mono', monospace">{skill.name}</text>
+        <text x={px} y={py - r - 18} textAnchor="middle" fill={d.color} fontSize="8" fontFamily="'JetBrains Mono', monospace">{label}</text>
       </g>}
+      {!hovered && unlocked && <text x={px} y={py - r - 8} textAnchor="middle" fill="#cfe2f4aa" fontSize="7" fontFamily="'JetBrains Mono', monospace">click</text>}
     </g>
   );
 }
@@ -182,6 +160,16 @@ function ConstellationMap({ skills, allocations, onAllocate, clickedNode }) {
     skills.forEach(sk => { if (sk.prereqs.length === 0 || sk.prereqs.every(p => (allocations[p] || 0) > 0)) s.add(sk.id); });
     return s;
   }, [skills, allocations]);
+  const roleCounts = useMemo(() => {
+    const counts = {};
+    skills.forEach((s) => { counts[s.id] = 0; });
+    ROLES.forEach((role) => {
+      (role.keySkills || []).forEach((sid) => {
+        counts[sid] = (counts[sid] || 0) + 1;
+      });
+    });
+    return counts;
+  }, [skills]);
 
   return (
     <div ref={ref} style={{ width: "100%", position: "relative" }}>
@@ -206,7 +194,7 @@ function ConstellationMap({ skills, allocations, onAllocate, clickedNode }) {
           return <text key={key} x={cx} y={cy} textAnchor="middle" fill={d.color} fontSize={dims.w < 600 ? "10" : "13"} fontWeight="700" fontFamily="'JetBrains Mono', monospace" letterSpacing="2">{d.icon} {d.label}</text>;
         })}
         {skills.map(s => <SkillNode key={s.id} skill={s} allocated={allocations[s.id] || 0} unlocked={unlocked.has(s.id)}
-          hovered={hov === s.id} onHover={setHov} onClick={onAllocate} W={dims.w} H={dims.h} justClicked={clickedNode === s.id} />)}
+          hovered={hov === s.id} onHover={setHov} onClick={onAllocate} W={dims.w} H={dims.h} justClicked={clickedNode === s.id} jobCount={roleCounts[s.id] || 0} />)}
       </svg>
     </div>
   );
@@ -362,15 +350,9 @@ function ProfilePanel({ allocations, panel, setPanel }) {
 // ── Main ──────────────────────────────────────────────────────────────────────
 
 export default function BatterySkillTree() {
-  if (typeof window !== "undefined" && window.location.pathname.startsWith("/dots")) {
-    return <BatterySkillTreeDots />;
-  }
-
   const [alloc, setAlloc] = useState({});
   const [panel, setPanel] = useState("profile");
   const [clicked, setClicked] = useState(null);
-  const [mobPanel, setMobPanel] = useState(false);
-  const isMob = useIsMobile();
   const used = Object.values(alloc).reduce((a, b) => a + b, 0);
   const rem = TOTAL_SKILL_POINTS - used;
 
@@ -386,7 +368,7 @@ export default function BatterySkillTree() {
   }, []);
 
   return (
-    <div style={{ minHeight: "100vh", background: "#0a0a14", color: "#e0e0e0", position: "relative", overflow: "hidden" }}>
+    <div style={{ height: "100vh", background: "#0a0a14", color: "#e0e0e0", position: "relative", overflow: "hidden" }}>
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700&family=JetBrains+Mono:wght@300;400;600;700&display=swap');
         @keyframes twinkle{0%,100%{opacity:0.1}50%{opacity:0.6}}
@@ -396,20 +378,19 @@ export default function BatterySkillTree() {
       `}</style>
       <StarField />
 
-      <div style={{ position: "relative", zIndex: 2, padding: isMob ? "16px 12px 0" : "24px 24px 0", textAlign: "center" }}>
-        <h1 style={{ fontFamily: "'Cinzel', serif", fontSize: isMob ? 15 : 22, fontWeight: 700, color: "#f0f0f0", letterSpacing: 3, marginBottom: 4 }}>⚡ BATTERY CAREER CONSTELLATION</h1>
+      <div style={{ position: "relative", zIndex: 2, padding: "18px 24px 0", textAlign: "center" }}>
+        <h1 style={{ fontFamily: "'Cinzel', serif", fontSize: 22, fontWeight: 700, color: "#f0f0f0", letterSpacing: 3, marginBottom: 4 }}>⚡ BATTERY CAREER CONSTELLATION · DOTS VERSION</h1>
         <p style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 10, color: "#8899aa", letterSpacing: 1 }}>Map your skills. Discover your path.</p>
       </div>
 
-      <div style={{ position: "relative", zIndex: 2, display: "flex", alignItems: "center", justifyContent: "center", gap: 12, padding: isMob ? "12px 12px" : "16px 24px", flexWrap: "wrap" }}>
+      <div style={{ position: "relative", zIndex: 2, display: "flex", alignItems: "center", justifyContent: "center", gap: 12, padding: "16px 24px", flexWrap: "wrap" }}>
         <div style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 11, color: "#ccdde8" }}>
           SKILL POINTS: <span style={{ color: rem > 0 ? "#4fc3f7" : "#ff8a65", fontWeight: 700 }}>{rem}</span> / {TOTAL_SKILL_POINTS}
         </div>
         <div style={{ width: 100, height: 4, background: "#1a1a2e", borderRadius: 2 }}>
           <div style={{ height: 4, borderRadius: 2, width: `${(used / TOTAL_SKILL_POINTS) * 100}%`, background: rem > 0 ? "linear-gradient(90deg, #4fc3f7, #4dd0e1)" : "linear-gradient(90deg, #ff8a65, #ffb74d)", transition: "width 0.3s" }} />
         </div>
-        <button onClick={() => { setAlloc({}); setMobPanel(false); }} style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 9, color: "#ccdde8", background: "none", border: "1px solid #555", borderRadius: 4, padding: "4px 10px", cursor: "pointer", letterSpacing: 1 }}>RESET</button>
-        {isMob && used > 0 && <button onClick={() => setMobPanel(!mobPanel)} style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 9, color: "#4fc3f7", background: "#4fc3f718", border: "1px solid #4fc3f744", borderRadius: 4, padding: "4px 12px", cursor: "pointer", letterSpacing: 1 }}>{mobPanel ? "▲ HIDE PROFILE" : "▼ VIEW PROFILE"}</button>}
+        <button onClick={() => setAlloc({})} style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 9, color: "#ccdde8", background: "none", border: "1px solid #555", borderRadius: 4, padding: "4px 10px", cursor: "pointer", letterSpacing: 1 }}>RESET</button>
       </div>
 
       {used > 0 && <div style={{ position: "relative", zIndex: 2, display: "flex", flexWrap: "wrap", gap: 5, justifyContent: "center", padding: "0 12px 8px" }}>
@@ -418,20 +399,19 @@ export default function BatterySkillTree() {
         </span>)}
       </div>}
 
-      <div style={{ position: "relative", zIndex: 2, display: "flex", flexDirection: isMob ? "column" : "row", padding: isMob ? "0 4px 24px" : "0 12px 24px", minHeight: isMob ? "auto" : 500 }}>
+      <div style={{ position: "relative", zIndex: 2, display: "flex", flexDirection: "row", padding: "0 12px 12px", height: "calc(100vh - 164px)" }}>
         <div style={{ flex: 1, minWidth: 0 }}>
           <ConstellationMap skills={SKILLS} allocations={alloc} onAllocate={handleAlloc} clickedNode={clicked} />
-          <div style={{ textAlign: "center", fontFamily: "'JetBrains Mono', monospace", fontSize: 9, color: "#8899aa", marginTop: 4 }}>Click nodes to cycle: Beginner → Intermediate → Advanced → Reset</div>
+          <div style={{ textAlign: "center", fontFamily: "'JetBrains Mono', monospace", fontSize: 9, color: "#8899aa", marginTop: 4 }}>Dot size = number of matching roles. Click dots to cycle: Beginner → Intermediate → Advanced → Reset</div>
         </div>
-        {(!isMob || mobPanel) && <div style={{
-          width: isMob ? "100%" : 340, minWidth: isMob ? "auto" : 300,
-          background: "#0e0e1eee", borderLeft: isMob ? "none" : "1px solid #ffffff0c",
-          borderTop: isMob ? "1px solid #ffffff0c" : "none",
-          borderRadius: isMob ? "12px 12px 0 0" : "12px 0 0 12px",
-          overflow: "auto", maxHeight: isMob ? "70vh" : 750, animation: "fadeIn 0.2s ease",
+        <div style={{
+          width: 360, minWidth: 320,
+          background: "#0e0e1eee", borderLeft: "1px solid #ffffff0c",
+          borderRadius: "12px 0 0 12px",
+          overflow: "auto", maxHeight: "100%", animation: "fadeIn 0.2s ease",
         }}>
           <ProfilePanel allocations={alloc} panel={panel} setPanel={setPanel} />
-        </div>}
+        </div>
       </div>
     </div>
   );
